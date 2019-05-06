@@ -68,5 +68,16 @@ Meteor.startup(function() {
 			status = user.status;
 			fireGlobalEvent('status-changed', status);
 		}
+		window.pendo.initialize({
+				visitor: {
+					id:              window.Meteor.userId(),  // Required if user is logged in
+					email:           window.Meteor.user().emails[0].address,  // Optional
+					roles:           window.Meteor.user().roles, // Optional
+					username:		 window.Meteor.user().username
+					// You can add any additional visitor level key-values here,
+					// as long as it's not one of the above reserved names.
+				}
+			});
+		
 	});
 });
