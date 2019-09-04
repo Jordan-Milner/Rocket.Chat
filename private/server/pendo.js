@@ -7,14 +7,17 @@
 
         // Call this whenever information about your visitors becomes available
         // Please use Strings, Numbers, or Bools for value types.
-        pendo.initialize({
-            visitor: {
-                id:              Meteor.userId(),  // Required if user is logged in
-                email:           Meteor.user().emails[0].address,  // Optional
-                roles:           Meteor.user().roles, // Optional
-				username:		 Meteor.user().username
-                // You can add any additional visitor level key-values here,
-                // as long as it's not one of the above reserved names.
-            }
-        });
+        window.console.log(typeof(Meteor) != "undefined")
+        if(typeof(Meteor) != "undefined"){
+            pendo.initialize({
+                visitor: {
+                    id:              Meteor.userId(),  // Required if user is logged in
+                    email:           Meteor.user().emails[0].address,  // Optional
+                    roles:           JSON.stringify(Meteor.user().roles), // Optional
+                    username:		 Meteor.user().username
+                    // You can add any additional visitor level key-values here,
+                    // as long as it's not one of the above reserved names.
+                }
+            });
+        }
 })('ecb0e9b8-105a-45ed-704c-6993b9813824');
