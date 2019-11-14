@@ -1,7 +1,8 @@
 import { Meteor } from 'meteor/meteor';
-import { FileUpload } from '../../../file-upload';
-import { Rooms } from '../../../models';
 import Busboy from 'busboy';
+
+import { FileUpload } from '../../../file-upload';
+import { Rooms, Messages } from '../../../models';
 import { API } from '../api';
 
 function findRoomByIdOrName({ params, checkedArchived = true }) {
@@ -41,7 +42,7 @@ API.v1.addRoute('rooms.get', { authRequired: true }, {
 		}
 
 		let result;
-		Meteor.runAsUser(this.userId, () => result = Meteor.call('rooms/get', updatedSinceDate));
+		Meteor.runAsUser(this.userId, () => { result = Meteor.call('rooms/get', updatedSinceDate); });
 
 		if (Array.isArray(result)) {
 			result = {
@@ -72,7 +73,7 @@ API.v1.addRoute('rooms.upload/:rid', { authRequired: true }, {
 		Meteor.wrapAsync((callback) => {
 			busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
 				if (fieldname !== 'file') {
-					return files.push(new Meteor.Error('invalid-field'));
+					return callback(new Meteor.Error('invalid-field'));
 				}
 
 				const fileDate = [];
@@ -83,7 +84,7 @@ API.v1.addRoute('rooms.upload/:rid', { authRequired: true }, {
 				});
 			});
 
-			busboy.on('field', (fieldname, value) => fields[fieldname] = value);
+			busboy.on('field', (fieldname, value) => { fields[fieldname] = value; });
 
 			busboy.on('finish', Meteor.bindEnvironment(() => callback()));
 
@@ -110,6 +111,8 @@ API.v1.addRoute('rooms.upload/:rid', { authRequired: true }, {
 			userId: this.userId,
 		};
 
+		let fileData = {};
+
 		Meteor.runAsUser(this.userId, () => {
 			const uploadedFile = Meteor.wrapAsync(fileStore.insert.bind(fileStore))(details, file.fileBuffer);
 
@@ -118,9 +121,11 @@ API.v1.addRoute('rooms.upload/:rid', { authRequired: true }, {
 			delete fields.description;
 
 			API.v1.success(Meteor.call('sendFileMessage', this.urlParams.rid, null, uploadedFile, fields));
+
+			fileData = uploadedFile;
 		});
 
-		return API.v1.success();
+		return API.v1.success({ message: Messages.getMessageByFileIdAndUsername(fileData._id, this.userId) });
 	},
 });
 
@@ -255,7 +260,7 @@ API.v1.addRoute('rooms.getDiscussions', { authRequired: true }, {
 		const ourQuery = Object.assign(query, { prid: room._id });
 
 		const discussions = Rooms.find(ourQuery, {
-			sort: sort ? sort : { fname: 1 },
+			sort: sort || { fname: 1 },
 			skip: offset,
 			limit: count,
 			fields,

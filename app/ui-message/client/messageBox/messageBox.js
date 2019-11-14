@@ -4,6 +4,13 @@ import { ReactiveDict } from 'meteor/reactive-dict';
 import { Session } from 'meteor/session';
 import { Template } from 'meteor/templating';
 import { Tracker } from 'meteor/tracker';
+import moment from 'moment';
+
+import { setupAutogrow } from './messageBoxAutogrow';
+import {
+	formattingButtons,
+	applyFormatting,
+} from './messageBoxFormatting';
 import { EmojiPicker } from '../../../emoji';
 import { Users } from '../../../models';
 import { settings } from '../../../settings';
@@ -23,12 +30,6 @@ import {
 	roomTypes,
 	getUserPreference,
 } from '../../../utils';
-import moment from 'moment';
-import { setupAutogrow } from './messageBoxAutogrow';
-import {
-	formattingButtons,
-	applyFormatting,
-} from './messageBoxFormatting';
 import './messageBoxActions';
 import './messageBoxReplyPreview';
 import './messageBoxTyping';
@@ -39,7 +40,6 @@ import './messageBoxReadOnly';
 
 Template.messageBox.onCreated(function() {
 	this.state = new ReactiveDict();
-	EmojiPicker.init();
 	this.popupConfig = new ReactiveVar(null);
 	this.replyMessageData = new ReactiveVar();
 	this.isMicrophoneDenied = new ReactiveVar(true);
@@ -70,7 +70,8 @@ Template.messageBox.onCreated(function() {
 			const before = input.value.substring(0, input.selectionStart);
 			const after = input.value.substring(input.selectionEnd, input.value.length);
 			input.value = `${ before }\n${ after }`;
-			input.selectionStart = input.selectionEnd = newPosition;
+			input.selectionStart = newPosition;
+			input.selectionEnd = newPosition;
 		} else {
 			input.value += '\n';
 		}
@@ -80,6 +81,8 @@ Template.messageBox.onCreated(function() {
 		input.focus();
 		autogrow.update();
 	};
+
+	let isSending = false;
 
 	this.send = (event) => {
 		const { input } = this;
@@ -91,15 +94,23 @@ Template.messageBox.onCreated(function() {
 		const { autogrow, data: { rid, tmid, onSend } } = this;
 		const { value } = input;
 		this.set('');
-		onSend && onSend.call(this.data, event, { rid, tmid, value }, () => {
+
+		if (!onSend || isSending) {
+			return;
+		}
+
+		isSending = true;
+		onSend.call(this.data, event, { rid, tmid, value }, () => {
 			autogrow.update();
 			input.focus();
+			isSending = false;
 		});
 	};
 });
 
 Template.messageBox.onRendered(function() {
 	const $input = $(this.find('.js-input-message'));
+	this.source = $input[0];
 	$input.on('dataChange', () => {
 		const messages = $input.data('reply') || [];
 		this.replyMessageData.set(messages);
@@ -116,8 +127,8 @@ Template.messageBox.onRendered(function() {
 			});
 		}
 
-		const isBlocked = (room && room.t === 'd' && subscription && subscription.blocked);
-		const isBlocker = (room && room.t === 'd' && subscription && subscription.blocker);
+		const isBlocked = room && room.t === 'd' && subscription && subscription.blocked;
+		const isBlocker = room && room.t === 'd' && subscription && subscription.blocker;
 		const isBlockedOrBlocker = isBlocked || isBlocker;
 
 		const mustJoinWithCode = !subscription && room.joinCodeRequired;
@@ -130,7 +141,7 @@ Template.messageBox.onRendered(function() {
 	});
 
 	this.autorun(() => {
-		const { rid, onInputChanged, onResize } = Template.currentData();
+		const { rid, tmid, onInputChanged, onResize } = Template.currentData();
 
 		Tracker.afterFlush(() => {
 			const input = this.find('.js-input-message');
@@ -145,6 +156,7 @@ Template.messageBox.onRendered(function() {
 			if (input && rid) {
 				this.popupConfig.set({
 					rid,
+					tmid,
 					getInput: () => input,
 				});
 			} else {
@@ -181,7 +193,6 @@ Template.messageBox.helpers({
 		if (!rid) {
 			return false;
 		}
-
 		const isAnonymous = !Meteor.userId();
 		return isAnonymous || instance.state.get('mustJoinWithCode');
 	},
@@ -264,6 +275,15 @@ const handleFormattingShortcut = (event, instance) => {
 	return true;
 };
 
+let sendOnEnter;
+let sendOnEnterActive;
+
+Tracker.autorun(() => {
+	sendOnEnter = getUserPreference(Meteor.userId(), 'sendOnEnter');
+	sendOnEnterActive = sendOnEnter == null || sendOnEnter === 'normal'
+		|| (sendOnEnter === 'desktop' && Meteor.Device.isDesktop());
+});
+
 const handleSubmit = (event, instance) => {
 	const { which: keyCode } = event;
 
@@ -273,9 +293,6 @@ const handleSubmit = (event, instance) => {
 		return false;
 	}
 
-	const sendOnEnter = getUserPreference(Meteor.userId(), 'sendOnEnter');
-	const sendOnEnterActive = sendOnEnter == null || sendOnEnter === 'normal' ||
-		(sendOnEnter === 'desktop' && Meteor.Device.isDesktop());
 	const withModifier = event.shiftKey || event.ctrlKey || event.altKey || event.metaKey;
 	const isSending = (sendOnEnterActive && !withModifier) || (!sendOnEnterActive && withModifier);
 
@@ -311,7 +328,7 @@ Template.messageBox.events({
 			return;
 		}
 
-		EmojiPicker.open(event.currentTarget, (emoji) => {
+		EmojiPicker.open(instance.source, (emoji) => {
 			const emojiValue = `:${ emoji }: `;
 
 			const { input } = instance;
@@ -359,7 +376,7 @@ Template.messageBox.events({
 		}
 
 		const files = [...event.originalEvent.clipboardData.items]
-			.filter((item) => (item.kind === 'file' && item.type.indexOf('image/') !== -1))
+			.filter((item) => item.kind === 'file' && item.type.indexOf('image/') !== -1)
 			.map((item) => ({
 				file: item.getAsFile(),
 				name: `Clipboard - ${ moment().format(settings.get('Message_TimeAndDateFormat')) }`,
@@ -369,7 +386,6 @@ Template.messageBox.events({
 		if (files.length) {
 			event.preventDefault();
 			fileUpload(files, input, { rid, tmid });
-			return;
 		}
 	},
 	'input .js-input-message'(event, instance) {

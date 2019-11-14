@@ -1,39 +1,26 @@
-import { Meteor } from 'meteor/meteor';
-import { MongoInternals } from 'meteor/mongo';
-import { SystemLogger } from '../../app/logger';
-import { settings } from '../../app/settings';
-import { Info } from '../../app/utils';
 import fs from 'fs';
 import path from 'path';
+
 import semver from 'semver';
+import { Meteor } from 'meteor/meteor';
+import { TAPi18n } from 'meteor/rocketchat:tap-i18n';
+
+import { SystemLogger } from '../../app/logger';
+import { settings } from '../../app/settings';
+import { Info, getMongoInfo } from '../../app/utils';
+import { Users } from '../../app/models/server';
+import { sendMessagesToAdmins } from '../lib/sendMessagesToAdmins';
+
+const exitIfNotBypassed = (ignore, errorCode = 1) => {
+	if (typeof ignore === 'string' && ['yes', 'true'].includes(ignore.toLowerCase())) {
+		return;
+	}
+
+	process.exit(errorCode);
+};
 
 Meteor.startup(function() {
-	const { mongo } = MongoInternals.defaultRemoteCollectionDriver();
-
-	const isOplogEnabled = Boolean(mongo._oplogHandle && mongo._oplogHandle.onOplogEntry);
-
-	let mongoDbVersion;
-	let mongoDbEngine;
-	try {
-		const { version, storageEngine } = Promise.await(mongo.db.command({ serverStatus: 1 }));
-		mongoDbVersion = version;
-		mongoDbEngine = storageEngine.name;
-	} catch (e) {
-		mongoDbVersion = 'Error getting version';
-
-		console.error('=== Error getting MongoDB info ===');
-		console.error(e && e.toString());
-		console.error('----------------------------------');
-		console.error('Without mongodb version we can\'t ensure you are running a compatible version.');
-		console.error('If you are running your mongodb with auth enabled and an user different from admin');
-		console.error('you may need to grant permissions for this user to check cluster data.');
-		console.error('You can do it via mongo shell running the following command replacing');
-		console.error('the string YOUR_USER by the correct user\'s name:');
-		console.error('');
-		console.error('   db.runCommand({ grantRolesToUser: "YOUR_USER" , roles: [{role: "clusterMonitor", db: "admin"}]})');
-		console.error('');
-		console.error('==================================');
-	}
+	const { oplogEnabled, mongoVersion, mongoStorageEngine } = getMongoInfo();
 
 	const desiredNodeVersion = semver.clean(fs.readFileSync(path.join(process.cwd(), '../../.node_version.txt')).toString());
 	const desiredNodeVersionMajor = String(semver.parse(desiredNodeVersion).major);
@@ -42,12 +29,12 @@ Meteor.startup(function() {
 		let msg = [
 			`Rocket.Chat Version: ${ Info.version }`,
 			`     NodeJS Version: ${ process.versions.node } - ${ process.arch }`,
-			`    MongoDB Version: ${ mongoDbVersion }`,
-			`     MongoDB Engine: ${ mongoDbEngine }`,
+			`    MongoDB Version: ${ mongoVersion }`,
+			`     MongoDB Engine: ${ mongoStorageEngine }`,
 			`           Platform: ${ process.platform }`,
 			`       Process Port: ${ process.env.PORT }`,
 			`           Site URL: ${ settings.get('Site_Url') }`,
-			`   ReplicaSet OpLog: ${ isOplogEnabled ? 'Enabled' : 'Disabled' }`,
+			`   ReplicaSet OpLog: ${ oplogEnabled ? 'Enabled' : 'Disabled' }`,
 		];
 
 		if (Info.commit && Info.commit.hash) {
@@ -60,27 +47,53 @@ Meteor.startup(function() {
 
 		msg = msg.join('\n');
 
-		if (!isOplogEnabled) {
+		if (!oplogEnabled) {
 			msg += ['', '', 'OPLOG / REPLICASET IS REQUIRED TO RUN ROCKET.CHAT, MORE INFORMATION AT:', 'https://go.rocket.chat/i/oplog-required'].join('\n');
 			SystemLogger.error_box(msg, 'SERVER ERROR');
 
-			return process.exit(1);
+			exitIfNotBypassed(process.env.BYPASS_OPLOG_VALIDATION);
 		}
 
 		if (!semver.satisfies(process.versions.node, desiredNodeVersionMajor)) {
 			msg += ['', '', 'YOUR CURRENT NODEJS VERSION IS NOT SUPPORTED,', `PLEASE UPGRADE / DOWNGRADE TO VERSION ${ desiredNodeVersionMajor }.X.X`].join('\n');
 			SystemLogger.error_box(msg, 'SERVER ERROR');
 
-			return process.exit(1);
+			exitIfNotBypassed(process.env.BYPASS_NODEJS_VALIDATION);
 		}
 
-		if (!semver.satisfies(semver.coerce(mongoDbVersion), '>=3.2.0')) {
-			msg += ['', '', 'YOUR CURRENT MONGODB VERSION IS NOT SUPPORTED,', 'PLEASE UPGRADE TO VERSION 3.2 OR LATER'].join('\n');
+		if (!semver.satisfies(semver.coerce(mongoVersion), '>=3.4.0')) {
+			msg += ['', '', 'YOUR CURRENT MONGODB VERSION IS NOT SUPPORTED,', 'PLEASE UPGRADE TO VERSION 3.4 OR LATER'].join('\n');
 			SystemLogger.error_box(msg, 'SERVER ERROR');
 
-			return process.exit(1);
+			exitIfNotBypassed(process.env.BYPASS_MONGO_VALIDATION);
 		}
 
-		return SystemLogger.startup_box(msg, 'SERVER RUNNING');
+		SystemLogger.startup_box(msg, 'SERVER RUNNING');
+
+		// Deprecation
+		if (!semver.satisfies(semver.coerce(mongoVersion), '>=3.6.0')) {
+			msg = [`YOUR CURRENT MONGODB VERSION (${ mongoVersion }) IS DEPRECATED.`, 'IT WILL NOT BE SUPPORTED ON ROCKET.CHAT VERSION 4.0.0 AND GREATER,', 'PLEASE UPGRADE MONGODB TO VERSION 3.6 OR GREATER'].join('\n');
+			SystemLogger.deprecation_box(msg, 'DEPRECATION');
+
+			const id = `mongodbDeprecation_${ mongoVersion.replace(/[^0-9]/g, '_') }`;
+			const title = 'MongoDB_Deprecated';
+			const text = 'MongoDB_version_s_is_deprecated_please_upgrade_your_installation';
+			const link = 'https://rocket.chat/docs/installation';
+
+			if (!Users.bannerExistsById(id)) {
+				sendMessagesToAdmins({
+					msgs: ({ adminUser }) => [{ msg: `*${ TAPi18n.__(title, adminUser.language) }*\n${ TAPi18n.__(text, mongoVersion, adminUser.language) }\n${ link }` }],
+					banners: [{
+						id,
+						priority: 100,
+						title,
+						text,
+						textArguments: [mongoVersion],
+						modifiers: ['danger'],
+						link,
+					}],
+				});
+			}
+		}
 	}, 100);
 });

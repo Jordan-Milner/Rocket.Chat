@@ -1,8 +1,9 @@
-import { ChatRoom } from '../../../../../models';
 import { ReactiveVar } from 'meteor/reactive-var';
 import { Template } from 'meteor/templating';
 import { Mongo } from 'meteor/mongo';
 import moment from 'moment';
+
+import { ChatRoom } from '../../../../../models';
 import './visitorHistory.html';
 
 const visitorHistory = new Mongo.Collection('visitor_history');
@@ -40,7 +41,9 @@ Template.visitorHistory.onCreated(function() {
 
 	this.autorun(() => {
 		const room = ChatRoom.findOne({ _id: Template.currentData().rid });
-		this.visitorId.set(room.v._id);
+		if (room) {
+			this.visitorId.set(room.v._id);
+		}
 	});
 
 	if (currentData && currentData.rid) {

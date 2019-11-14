@@ -2,16 +2,17 @@ import { Meteor } from 'meteor/meteor';
 import { ReactiveVar } from 'meteor/reactive-var';
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { Template } from 'meteor/templating';
-import { TAPi18n } from 'meteor/tap:i18n';
+import { TAPi18n } from 'meteor/rocketchat:tap-i18n';
 import { Tracker } from 'meteor/tracker';
-import { handleError } from '../../../utils';
-import { hasAllPermission, hasAtLeastOnePermission } from '../../../authorization';
-import { ChatIntegrations, ChatIntegrationHistory } from '../collections';
-import { integrations } from '../../lib/rocketchat';
 import _ from 'underscore';
 import hljs from 'highlight.js';
 import moment from 'moment';
 import toastr from 'toastr';
+
+import { handleError } from '../../../utils';
+import { hasAllPermission, hasAtLeastOnePermission } from '../../../authorization';
+import { ChatIntegrations, ChatIntegrationHistory } from '../collections';
+import { integrations } from '../../lib/rocketchat';
 import { SideNav } from '../../../ui-utils/client';
 
 Template.integrationsOutgoingHistory.onCreated(function _integrationsOutgoingHistoryOnCreated() {
@@ -25,9 +26,9 @@ Template.integrationsOutgoingHistory.onCreated(function _integrationsOutgoingHis
 			if (sub.ready()) {
 				let intRecord;
 
-				if (hasAllPermission('manage-integrations')) {
+				if (hasAllPermission('manage-outgoing-integrations')) {
 					intRecord = ChatIntegrations.findOne({ _id: id });
-				} else if (hasAllPermission('manage-own-integrations')) {
+				} else if (hasAllPermission('manage-own-outgoing-integrations')) {
 					intRecord = ChatIntegrations.findOne({ _id: id, '_createdBy._id': Meteor.userId() });
 				}
 
@@ -52,7 +53,7 @@ Template.integrationsOutgoingHistory.onCreated(function _integrationsOutgoingHis
 
 Template.integrationsOutgoingHistory.helpers({
 	hasPermission() {
-		return hasAtLeastOnePermission(['manage-integrations', 'manage-own-integrations']);
+		return hasAtLeastOnePermission(['manage-outgoing-integrations', 'manage-own-outgoing-integrations']);
 	},
 
 	hasMore() {
@@ -80,11 +81,10 @@ Template.integrationsOutgoingHistory.helpers({
 	iconClass(history) {
 		if (typeof history.error !== 'undefined' && history.error) {
 			return 'icon-cancel-circled error-color';
-		} else if (history.finished) {
+		} if (history.finished) {
 			return 'icon-ok-circled success-color';
-		} else {
-			return 'icon-help-circled';
 		}
+		return 'icon-help-circled';
 	},
 
 	statusI18n(error) {
@@ -106,11 +106,10 @@ Template.integrationsOutgoingHistory.helpers({
 	jsonStringify(data) {
 		if (!data) {
 			return '';
-		} else if (typeof data === 'object') {
+		} if (typeof data === 'object') {
 			return hljs.highlight('json', JSON.stringify(data, null, 2)).value;
-		} else {
-			return hljs.highlight('json', data).value;
 		}
+		return hljs.highlight('json', data).value;
 	},
 
 	integrationId() {
@@ -140,7 +139,6 @@ Template.integrationsOutgoingHistory.events({
 		Meteor.call('replayOutgoingIntegration', { integrationId: t.data.params().id, historyId }, (e) => {
 			if (e) {
 				handleError(e);
-				return;
 			}
 		});
 	},

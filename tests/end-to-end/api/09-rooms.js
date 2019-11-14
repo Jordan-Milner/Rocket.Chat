@@ -1,6 +1,7 @@
 import { getCredentials, api, request, credentials } from '../../data/api-data.js';
 import { password } from '../../data/user';
 import { closeRoom, createRoom } from '../../data/rooms.helper';
+import { imgURL } from '../../data/interactions.js';
 import { updatePermission, updateSetting } from '../../data/permissions.helper';
 import { sendSimpleMessage } from '../../data/chat.helper';
 
@@ -25,7 +26,7 @@ describe('[Rooms]', function() {
 		request.get(api('rooms.get'))
 			.set(credentials)
 			.query({
-				updatedSince: new Date,
+				updatedSince: new Date(),
 			})
 			.expect(200)
 			.expect((res) => {
@@ -64,6 +65,72 @@ describe('[Rooms]', function() {
 				.expect(200)
 				.expect((res) => {
 					expect(res.body).to.have.property('success', true);
+				})
+				.end(done);
+		});
+	});
+
+	describe('/rooms.upload', () => {
+		let testChannel;
+		const testChannelName = `channel.test.upload.${ Date.now() }`;
+		it('create an channel', (done) => {
+			createRoom({ type: 'c', name: testChannelName })
+				.end((err, res) => {
+					testChannel = res.body.channel;
+					done();
+				});
+		});
+		it('don\'t upload a file to room with file field other than file', (done) => {
+			request.post(api(`rooms.upload/${ testChannel._id }`))
+				.set(credentials)
+				.attach('test', imgURL)
+				.expect('Content-Type', 'application/json')
+				.expect(400)
+				.expect((res) => {
+					expect(res.body).to.have.property('success', false);
+					expect(res.body).to.have.property('error', '[invalid-field]');
+					expect(res.body).to.have.property('errorType', 'invalid-field');
+				})
+				.end(done);
+		});
+		it('don\'t upload a file to room with empty file', (done) => {
+			request.post(api(`rooms.upload/${ testChannel._id }`))
+				.set(credentials)
+				.attach('file', '')
+				.expect('Content-Type', 'application/json')
+				.expect(400)
+				.expect((res) => {
+					expect(res.body).to.have.property('success', false);
+					expect(res.body).to.have.property('error', res.body.error);
+				})
+				.end(done);
+		});
+		it('don\'t upload a file to room with more than 1 file', (done) => {
+			request.post(api(`rooms.upload/${ testChannel._id }`))
+				.set(credentials)
+				.attach('file', imgURL)
+				.attach('file', imgURL)
+				.expect('Content-Type', 'application/json')
+				.expect(400)
+				.expect((res) => {
+					expect(res.body).to.have.property('success', false);
+					expect(res.body).to.have.property('error', 'Just 1 file is allowed');
+				})
+				.end(done);
+		});
+		it('upload a file to room', (done) => {
+			request.post(api(`rooms.upload/${ testChannel._id }`))
+				.set(credentials)
+				.attach('file', imgURL)
+				.expect('Content-Type', 'application/json')
+				.expect(200)
+				.expect((res) => {
+					const { message } = res.body;
+					expect(res.body).to.have.property('success', true);
+					expect(res.body).to.have.nested.property('message._id', message._id);
+					expect(res.body).to.have.nested.property('message.rid', testChannel._id);
+					expect(res.body).to.have.nested.property('message.file._id', message.file._id);
+					expect(res.body).to.have.nested.property('message.file.type', message.file.type);
 				})
 				.end(done);
 		});
@@ -291,14 +358,14 @@ describe('[Rooms]', function() {
 				});
 		});
 		it('create a group', (done) => {
-			createRoom(({ type: 'p', name: testGroupName }))
+			createRoom({ type: 'p', name: testGroupName })
 				.end((err, res) => {
 					testGroup = res.body.group;
 					done();
 				});
 		});
 		it('create a Direct message room with rocket.cat', (done) => {
-			createRoom(({ type: 'd', username: 'rocket.cat' }))
+			createRoom({ type: 'd', username: 'rocket.cat' })
 				.end((err, res) => {
 					testDM = res.body.room;
 					done();
@@ -409,14 +476,14 @@ describe('[Rooms]', function() {
 				});
 		});
 		it('create a group', (done) => {
-			createRoom(({ type: 'p', name: testGroupName }))
+			createRoom({ type: 'p', name: testGroupName })
 				.end((err, res) => {
 					testGroup = res.body.group;
 					done();
 				});
 		});
 		it('create a Direct message room with rocket.cat', (done) => {
-			createRoom(({ type: 'd', username: 'rocket.cat' }))
+			createRoom({ type: 'd', username: 'rocket.cat' })
 				.end((err, res) => {
 					testDM = res.body.room;
 					done();

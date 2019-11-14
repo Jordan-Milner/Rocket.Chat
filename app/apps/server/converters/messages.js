@@ -1,4 +1,5 @@
 import { Random } from 'meteor/random';
+
 import { Messages, Rooms, Users } from '../../../models';
 import { transformMappedData } from '../../lib/misc/transformMappedData';
 
@@ -20,6 +21,7 @@ export class AppMessagesConverter {
 
 		const map = {
 			id: '_id',
+			threadId: 'tmid',
 			reactions: 'reactions',
 			parseUrls: 'parseUrls',
 			text: 'msg',
@@ -29,8 +31,10 @@ export class AppMessagesConverter {
 			emoji: 'emoji',
 			avatarUrl: 'avatar',
 			alias: 'alias',
+			file: 'file',
 			customFields: 'customFields',
 			groupable: 'groupable',
+			token: 'token',
 			room: (message) => {
 				const result = this.orch.getConverters().get('rooms').convertById(message.rid);
 				delete message.rid;
@@ -115,6 +119,7 @@ export class AppMessagesConverter {
 
 		const newMessage = {
 			_id: message.id || Random.id(),
+			tmid: message.threadId,
 			rid: room._id,
 			u,
 			msg: message.text,
