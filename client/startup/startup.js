@@ -1,20 +1,37 @@
-import { Meteor } from 'meteor/meteor';
-import { Tracker } from 'meteor/tracker';
-import { Session } from 'meteor/session';
-import { TimeSync } from 'meteor/mizzao:timesync';
-import { UserPresence } from 'meteor/konecty:user-presence';
-import toastr from 'toastr';
-import hljs from 'highlight.js';
+import {
+	Meteor
+  } from 'meteor/meteor';
+  import {
+	Tracker
+  } from 'meteor/tracker';
+  import {
+	Session
+  } from 'meteor/session';
+  import {
+	TimeSync
+  } from 'meteor/mizzao:timesync';
+  import {
+	UserPresence
+  } from 'meteor/konecty:user-presence';
+  import {
+	fireGlobalEvent
+  } from '../../app/ui-utils';
+  import {
+	settings
+  } from '../../app/settings';
+  import {
+	Users
+  } from '../../app/models';
+  import {
+	getUserPreference
+  } from '../../app/utils';
+  import toastr from 'toastr';
+  import hljs from 'highlight.js';
+  import 'highlight.js/styles/github.css';
 
-import { fireGlobalEvent } from '../../app/ui-utils';
-import { settings } from '../../app/settings';
-import { Users } from '../../app/models';
-import { getUserPreference } from '../../app/utils';
-import 'highlight.js/styles/github.css';
+  hljs.initHighlightingOnLoad();
 
-hljs.initHighlightingOnLoad();
-
-if (window.DISABLE_ANIMATION) {
+  if (window.DISABLE_ANIMATION) {
 	toastr.options.timeOut = 1;
 	toastr.options.showDuration = 0;
 	toastr.options.hideDuration = 0;
@@ -30,11 +47,20 @@ if (window.DISABLE_ANIMATION) {
 	window.lastMessageWindowHistory = {};
 
 	Tracker.autorun(function(computation) {
+<<<<<<< HEAD
 		if (!Meteor.userId() && !settings.get('Accounts_AllowAnonymousRead')) {
 			return;
 		}
 		Meteor.subscribe('userData');
 		computation.stop();
+=======
+	  if (!Meteor.userId() && !settings.get('Accounts_AllowAnonymousRead')) {
+		return;
+	  }
+	  Meteor.subscribe('userData');
+	  Meteor.subscribe('activeUsers');
+	  computation.stop();
+>>>>>>> e076b7fedd6ce7d01d114be5c4f58329511f1777
 	});
 
 	let status = undefined;

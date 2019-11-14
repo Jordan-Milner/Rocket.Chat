@@ -155,7 +155,11 @@ Settings.find({ _id: /theme-color-rc/i }, { fields: { value: 1 } }).observe({
 	changed: renderDynamicCssList,
 });
 
-injectIntoBody('icons', Assets.getText('public/icons.svg'));
+Inject.rawHead('noreferrer', '<meta name="referrer" content="origin-when-cross-origin" />');
+Inject.rawHead('dynamic', `<script>${ Assets.getText('server/dynamic-css.js') }</script>`);
+// Inject.rawHead('pendo', `<script>${ Assets.getText('server/pendo.js') }</script>`);
+
+Inject.rawBody('icons', Assets.getText('public/icons.svg'));
 
 injectIntoBody('page-loading-div', `
 <div id="initial-page-loading" class="page-loading">
