@@ -15,8 +15,8 @@
                     email:           Meteor.user().emails[0].address,  // Optional
                     roles:           JSON.stringify(Meteor.user().roles), // Optional
                     username:		 Meteor.user().username,
-					full_name:       Meteor.user().name,
-					tags:            [Meteor.user().roles, Meteor.user().settings.preferences.sidebarSortby]
+		    full_name:       Meteor.user().name,
+		    tags:            [Meteor.user().roles, Meteor.user().settings.preferences.sidebarSortby]
                     // You can add any additional visitor level key-values here,
                     // as long as it's not one of the above reserved names.
                 }
