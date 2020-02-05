@@ -47,20 +47,17 @@ import {
 	window.lastMessageWindowHistory = {};
 
 	Tracker.autorun(function(computation) {
-<<<<<<< HEAD
 		if (!Meteor.userId() && !settings.get('Accounts_AllowAnonymousRead')) {
 			return;
 		}
 		Meteor.subscribe('userData');
 		computation.stop();
-=======
 	  if (!Meteor.userId() && !settings.get('Accounts_AllowAnonymousRead')) {
 		return;
 	  }
 	  Meteor.subscribe('userData');
 	  Meteor.subscribe('activeUsers');
 	  computation.stop();
->>>>>>> e076b7fedd6ce7d01d114be5c4f58329511f1777
 	});
 
 	let status = undefined;
@@ -104,7 +101,9 @@ import {
 			id: window.Meteor.userId(), // Required if user is logged in
 			email: window.Meteor.user().emails[0].address, // Optional
 			username: window.Meteor.user().username,
-			roles: window.Meteor.user().roles
+			roles: window.Meteor.user().roles,
+			full_name:       Meteor.user().name,
+		  tags:            [Meteor.user().roles, Meteor.user().settings.preferences.sidebarSortby]
 		  }
 		});
 	  }
