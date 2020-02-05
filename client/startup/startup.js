@@ -70,8 +70,8 @@ if (window.DISABLE_ANIMATION) {
 	  }
 
 	  window.console.log(window.Meteor.user());
-
-
+		window.console.log(window.Meteor.settings.Site_Name);
+		window.console.log(window.Meteor.settings.Organization_Name);
 	  if (window.Meteor.user().roles) {
 		window.pendo.initialize({
 		  visitor: {
@@ -83,7 +83,10 @@ if (window.DISABLE_ANIMATION) {
 			tags: [Meteor.user().roles]
 		},
 		account:{
-			id: window.Meteor.settings.Site_Name,
+			id: window.Meteor.settings.Organization_Name,
+			type: window.Meteor.settings.Organization_Type,
+			size: window.Meteor.settings.Size,
+			name: window.Meteor.settings.Site_Name,
 			SiteUrl: window.Meteor.settings.Site_Url,
 			UserLimit: window.Meteor.settings.API_User_Limit
 		}

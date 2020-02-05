@@ -1443,6 +1443,7 @@ settings.addGroup('Setup_Wizard', function() {
 					i18nLabel: 'Community',
 				},
 			],
+			public: true,
 			wizard: {
 				step: 2,
 				order: 0,
@@ -1450,6 +1451,7 @@ settings.addGroup('Setup_Wizard', function() {
 		});
 		this.add('Organization_Name', '', {
 			type: 'string',
+			public: true,
 			wizard: {
 				step: 2,
 				order: 1,
@@ -1457,6 +1459,7 @@ settings.addGroup('Setup_Wizard', function() {
 		});
 		this.add('Industry', '', {
 			type: 'select',
+			public: true,
 			values: [
 				{
 					key: 'advocacy',
@@ -1566,6 +1569,7 @@ settings.addGroup('Setup_Wizard', function() {
 		});
 		this.add('Size', '', {
 			type: 'select',
+			public: true,
 			values: [
 				{
 					key: '0',
@@ -1607,6 +1611,7 @@ settings.addGroup('Setup_Wizard', function() {
 		});
 		this.add('Country', '', {
 			type: 'select',
+			public: true,
 			values: [
 				{
 					key: 'worldwide',
