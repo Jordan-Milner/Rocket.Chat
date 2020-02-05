@@ -81,7 +81,12 @@ if (window.DISABLE_ANIMATION) {
 			roles: window.Meteor.user().roles,
 			full_name: Meteor.user().name,
 			tags: [Meteor.user().roles]
-		  }
+		},
+		account:{
+			id: window.Meteor.Site_Name,
+			SiteUrl: window.Meteor.Site_Url,
+			UserLimit: window.Meteor.API_User_Limit
+		}
 		});
 	  }
 
