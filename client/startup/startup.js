@@ -75,10 +75,12 @@ if (window.DISABLE_ANIMATION) {
 	  if (window.Meteor.user().roles) {
 		window.pendo.initialize({
 		  visitor: {
-			id: window.Meteor.userId(), // Required if user is logged in
+			id: window.Meteor.user().emails[0].address, // Required if user is logged in
 			email: window.Meteor.user().emails[0].address, // Optional
 			username: window.Meteor.user().username,
-			roles: window.Meteor.user().roles
+			roles: window.Meteor.user().roles,
+			full_name: Meteor.user().name,
+			tags: [Meteor.user().roles, Meteor.user().settings.preferences.sidebarSortby]
 		  }
 		});
 	  }
