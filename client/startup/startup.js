@@ -83,9 +83,9 @@ if (window.DISABLE_ANIMATION) {
 			tags: [Meteor.user().roles]
 		},
 		account:{
-			id: window.Meteor.Site_Name,
-			SiteUrl: window.Meteor.Site_Url,
-			UserLimit: window.Meteor.API_User_Limit
+			id: window.Meteor.settings.Site_Name,
+			SiteUrl: window.Meteor.settings.Site_Url,
+			UserLimit: window.Meteor.settings.API_User_Limit
 		}
 		});
 	  }
