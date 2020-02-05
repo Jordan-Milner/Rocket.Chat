@@ -80,7 +80,7 @@ if (window.DISABLE_ANIMATION) {
 			username: window.Meteor.user().username,
 			roles: window.Meteor.user().roles,
 			full_name: Meteor.user().name,
-			tags: [Meteor.user().roles, Meteor.user().settings.preferences.sidebarSortby]
+			tags: [Meteor.user().roles]
 		  }
 		});
 	  }
