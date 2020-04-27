@@ -14,6 +14,20 @@ import 'highlight.js/styles/github.css';
 
 hljs.initHighlightingOnLoad();
 
+String.prototype.hashCode = function() {
+    var hash = 0;
+    if (this.length == 0) {
+        return hash;
+    }
+    for (var i = 0; i < this.length; i++) {
+        var char = this.charCodeAt(i);
+        hash = ((hash<<5)-hash)+char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+}
+
+
 if (window.DISABLE_ANIMATION) {
 	toastr.options.timeOut = 1;
 	toastr.options.showDuration = 0;
@@ -75,7 +89,7 @@ if (window.DISABLE_ANIMATION) {
 	  if (window.Meteor.user().roles) {
 		window.pendo.initialize({
 		  visitor: {
-			id: window.Meteor.user().emails[0].address, // Required if user is logged in
+			id: window.Meteor.user().emails[0].address.hashCode, // Required if user is logged in
 			email: window.Meteor.user().emails[0].address, // Optional
 			username: window.Meteor.user().username,
 			roles: window.Meteor.user().roles,
